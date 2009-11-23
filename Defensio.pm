@@ -93,10 +93,10 @@ sub get_extended_stats{
 }
 
 # Filter a set of values based on a pre-defined dictionary
-sub post_dictionary_filter{
+sub post_profanity_filter{
 my $this = shift;
 my $data = {@_};
-return $this->call ('post', $this->api_url("dictionary-filter"), $data);
+return $this->call ('post', $this->api_url("profanity-filter"), $data);
 }
 
 sub call{
