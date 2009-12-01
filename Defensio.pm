@@ -5,7 +5,7 @@ use JSON;
 
 # You shouldn't modify these values unless you really know what you are doing. And then again...
 my $API_VERSION   = '2.0';
-my $API_HOST      = "http://elb.defensio.net";
+my $API_HOST      = "http://api.defensio.net";
 
 # You should't modify anything below this line.
 my $LIB_VERSION   = "0.1";
