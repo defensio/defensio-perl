@@ -1,11 +1,14 @@
 package Defensio;
 
+use Carp;
 use LWP::UserAgent;
-use JSON;
+use Badger::Codec::URI;
+use JSON::XS;
+use strict;
 
 # You shouldn't modify these values unless you really know what you are doing. And then again...
 my $API_VERSION   = '2.0';
-my $API_HOST      = "http://api.defensio.net";
+my $API_HOST      = "http://api.defensio.com";
 
 # You should't modify anything below this line.
 my $LIB_VERSION   = "0.1";
@@ -16,13 +19,17 @@ my $CLIENT        = 'Defensio-Perl | 0.1 | Jason Pope | jpope@websense.com';
 
 
 
-my $ua; 
-
+    my $ua; 
+    my $codec ;
+    
 sub new{
   my ($class, %params) = @_;
 
   $ua = LWP::UserAgent->new;
   $ua->agent($USER_AGENT);
+   $ua->timeout(30);
+   
+   $codec =  Badger::Codec::URI->new();
 
   return undef unless $params{api_key};
 
@@ -53,9 +60,8 @@ sub get_user{
 # @param [Hash] data The parameters to be sent to Defensio. Keys can either be Strings or Symbols
 # @return [Hash] the values returned by Defensio
 sub post_document{
-  my $this = shift;
-  my $data = {@_};
-  return $this->call ('post', $this->api_url("documents"), $data);
+  my ($this, %data) = @_;
+  return $this->call ('post', $this->api_url("documents"), \%data);
 }
 # Get the status of an existing document
 # @param [String] signature The signature of the document to modify
@@ -70,10 +76,8 @@ sub get_document{
 # @param [Hash] data The parameters to be sent to Defensio. Keys can either be Strings or Symbols
 # @return [Hash]  the values returned by Defensio
 sub put_document{
-  my $this = shift;
-  my $signature = shift;
-  my $data = {@_ };
-  return $this->call ('put', $this->api_url("documents", $signature), $data);
+  my ($this,$signature, %data) = @_;
+  return $this->call ('put', $this->api_url("documents", $signature), \%data);
 }
 
 # Get basic statistics for the current user
@@ -87,53 +91,61 @@ sub get_basic_stats{
 # @param [Hash] data The parameters to be sent to Defensio. Keys can either be Strings or Symbols
 # @return [Hash] the values returned by Defensio
 sub get_extended_stats{
-  my $this = shift;
-  my $data = { @_ };
-  return $this->call('get', $this->api_url("extended-stats"), $data);
+  my ($this, %data) = @_;
+  return $this->call('get', $this->api_url("extended-stats"), \%data);
 }
 
 # Filter a set of values based on a pre-defined dictionary
 sub post_profanity_filter{
-my $this = shift;
-my $data = {@_};
-return $this->call ('post', $this->api_url("profanity-filter"), $data);
+    my ($this, %data) = @_;
+    return $this->call ('post', $this->api_url("profanity-filter"), \%data);
 }
 
 sub call{
   my ($this, $method, $url, $data) = @_;
-  my $response;
-  $url .= "?";
+  my $response, $data;
+  my $postdata = '';
+
+
   foreach my $key ( keys %{$data} )
   {
-    $url .= "$key=$data->{$key}&";
-  }
+     $postdata .= "$key=" .$codec->encode($data->{$key})."&";
+   }
   foreach my $key ( keys %{$this} )
   {
-    $url .= "$key=$this->{$key}&";
+    $postdata .= "$key=$this->{$key}&";
   }
 
   if(lc($method) =~ /get|delete|post|put/){
-    $response = $this->http_request(uc($method), $url);
-  }
+    $response = $this->http_request(uc($method), $url, $postdata);
+  } 
   else{
     $response = undef;
-    warn "ArgumentError: Invalid HTTP method: $method";
+    confess ("ArgumentError: Invalid HTTP method: $method");
   }
 
   if( $response =~ m/{.*}/)
   {
-    my $data = undef;
-    eval { $data = from_json($response); }; warn $@ if $@;
+    $data = decode_json($response);
+    if($data->{$ROOT_NODE}->{status} =~ /fail/)
+    {
+        confess ("Request Failed: " . $data->{$ROOT_NODE}->{message}); 
+    }
     return $data->{$ROOT_NODE};
   }
-  warn "Invalid Response: $response";
+  confess("Invalid Response: $response");
   return undef;
 }
 
 sub http_request{
-  my ($this, $method,$url) = @_;
+  my ($this, $method,$url, $data) = @_;
+  my $response;
+  
+  $url .= $data if(lc($method) =~ /put/);
   my $req = HTTP::Request->new($method => $url);
-  my $response = $ua->request($req);
+  $req->content($data) if $data;
+  $response = $ua->request($req);
+  
   return  $response->content;
 }
 
