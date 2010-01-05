@@ -11,11 +11,11 @@ my $API_VERSION   = '2.0';
 my $API_HOST      = "http://api.defensio.com";
 
 # You should't modify anything below this line.
-my $LIB_VERSION   = "0.1";
+my $LIB_VERSION   = "0.9";
 my $ROOT_NODE     = "defensio-result";
 my $FORMAT        = "json";
-my $USER_AGENT    = "Defensio-Perl 0.1";
-my $CLIENT        = 'Defensio-Perl | 0.1 | Jason Pope | jpope@websense.com';
+my $USER_AGENT    = "Defensio-Perl 0.9";
+my $CLIENT        = 'Defensio-Perl | 0.9 | Jason Pope | jpope@websense.com';
 
 
 
